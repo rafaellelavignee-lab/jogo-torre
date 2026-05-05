@@ -18,7 +18,6 @@ function gerarPergunta(nivelTotal) {
 }
 
 export default function App() {
-  // Estados do Jogo
   const [nome, setNome] = useState("");
   const [jogoIniciado, setJogoIniciado] = useState(false);
   const [nivelTotal, setNivelTotal] = useState(1);
@@ -34,26 +33,21 @@ export default function App() {
   const [shake, setShake] = useState(false);
   const [fogoAtivo, setFogoAtivo] = useState(false);
   const [dragaoAtacando, setDragaoAtacando] = useState(false);
+  const [heroiAtacando, setHeroiAtacando] = useState(false); // NOVO: Estado de ataque do herói
   
   const [ranking, setRanking] = useState(() => JSON.parse(localStorage.getItem("math_ranks") || "[]"));
 
-  // Referências de Áudio (Previne bugs de carregamento)
+  // Referências de Áudio
   const somDragao = useRef(new Audio("https://www.soundjay.com/creatures/sounds/dragon-roar-1.mp3"));
   const somTick = useRef(new Audio("https://www.soundjay.com/buttons/sounds/button-50.mp3"));
+  const somAtaqueHeroi = useRef(new Audio("https://www.soundjay.com/mechanical/sounds/sword-clash-1.mp3")); // NOVO: Som de espada
   const musicaGuerra = useRef(new Audio("https://www.soundjay.com/free-music/sounds/action-rock-1.mp3"));
 
-  // Função para iniciar jogo e áudio
   const handleStart = () => {
-    // Tenta tocar e pausar imediatamente para "desbloquear" o áudio no navegador
     const m = musicaGuerra.current;
     m.loop = true;
     m.volume = 0.3;
-    m.play().then(() => {
-        setJogoIniciado(true);
-    }).catch(err => {
-        console.log("Aguardando interação para áudio");
-        setJogoIniciado(true); // Inicia mesmo se o áudio falhar
-    });
+    m.play().then(() => setJogoIniciado(true)).catch(() => setJogoIniciado(true));
   };
 
   const salvarRank = useCallback(() => {
@@ -70,6 +64,13 @@ export default function App() {
     const acertou = !porTempo && parseInt(resposta) === dados.resposta;
 
     if (acertou) {
+      // ANIMAÇÃO DE ATAQUE DO HERÓI
+      setHeroiAtacando(true);
+      somAtaqueHeroi.current.currentTime = 0;
+      somAtaqueHeroi.current.play().catch(() => {});
+      
+      setTimeout(() => setHeroiAtacando(false), 500);
+
       setDragonVida(v => {
         const novaVida = v - 20;
         if (novaVida <= 0) {
@@ -81,11 +82,9 @@ export default function App() {
       setNivelTotal(n => n + 1);
       setDados(gerarPergunta(nivelTotal + 1));
     } else {
-      // Som do dragão
       somDragao.current.currentTime = 0;
       somDragao.current.play().catch(() => {});
       
-      // Animações de dano
       setDragaoAtacando(true);
       setFogoAtivo(true);
       setShake(true);
@@ -109,14 +108,12 @@ export default function App() {
     setTempoRestante(30);
   }, [resposta, dados, nivelTotal, vitoria, derrota]);
 
-  // Timer
   useEffect(() => {
     let intervalo;
     if (jogoIniciado && !vitoria && !derrota) {
       intervalo = setInterval(() => {
         setTempoRestante(prev => {
           if (prev > 1) {
-            // Som de tick (volume baixo)
             somTick.current.currentTime = 0;
             somTick.current.volume = 0.1;
             somTick.current.play().catch(() => {});
@@ -130,7 +127,6 @@ export default function App() {
     return () => clearInterval(intervalo);
   }, [jogoIniciado, vitoria, derrota, verificar]);
 
-  // Monitorar Fim de Jogo
   useEffect(() => {
     if (vitoria || derrota) {
       salvarRank();
@@ -138,7 +134,6 @@ export default function App() {
     }
   }, [vitoria, derrota, salvarRank]);
 
-  // Tela de Menu / Vitória / Derrota
   if (!jogoIniciado || vitoria || derrota) return (
     <div style={styles.menuScreen}>
       <h1 style={styles.mainTitle}>{vitoria ? "🏆 VITÓRIA!" : derrota ? "💀 FIM DE JOGO" : "⚔️ MISSÃO MATEMÁTICA"}</h1>
@@ -174,7 +169,6 @@ export default function App() {
       <div style={{...styles.container, animation: shake ? "shake 0.4s" : "none"}}>
         <div style={styles.backgroundLayer} />
         
-        {/* HUD de Vida e Tempo */}
         <div style={styles.hud}>
           <div style={styles.hudSide}>
             <div style={styles.label}>{nome || "GUERREIRO"}</div>
@@ -192,10 +186,18 @@ export default function App() {
           </div>
         </div>
 
-        {/* Campo de Batalha */}
         <div style={styles.battlefield}>
           <img src={IMG_TORRE} style={styles.tower} alt="Torre" />
-          <img src={IMG_HEROI} style={styles.hero} alt="Heroi" />
+          
+          {/* HERÓI COM ANIMAÇÃO DE ATAQUE */}
+          <img 
+            src={IMG_HEROI} 
+            style={{
+                ...styles.hero,
+                animation: heroiAtacando ? "ataqueHeroi 0.5s ease-out" : "none"
+            }} 
+            alt="Heroi" 
+          />
           
           <img 
             src={IMG_DRAGAO} 
@@ -209,7 +211,6 @@ export default function App() {
           {fogoAtivo && <div className="fire"></div>}
         </div>
 
-        {/* Interface de Pergunta */}
         <div style={styles.questionCard}>
           <div style={{color: 'red', fontWeight: 'bold', marginBottom: '5px'}}>DESAFIO NÍVEL {nivelTotal}</div>
           <p style={{color: '#fff', fontSize: '1.6rem', margin: '10px 0'}}>{dados.pergunta}</p>
@@ -221,7 +222,6 @@ export default function App() {
             onChange={e => setResposta(e.target.value)} 
             onKeyDown={e => e.key === 'Enter' && verificar()}
           />
-          <div style={{color: '#666', marginTop: '10px', fontSize: '0.9rem'}}>Digite a resposta e aperte ENTER</div>
         </div>
       </div>
 
@@ -241,6 +241,13 @@ export default function App() {
           0% { transform: translateX(0) scale(1); }
           50% { transform: translateX(-250px) scale(1.3); filter: brightness(1.8) drop-shadow(0 0 15px red); }
           100% { transform: translateX(0) scale(1); }
+        }
+
+        /* NOVA ANIMAÇÃO: ATAQUE DO HERÓI */
+        @keyframes ataqueHeroi {
+          0% { transform: translateX(0) rotate(0deg); }
+          50% { transform: translateX(300px) rotate(15deg) scale(1.2); filter: brightness(1.5); }
+          100% { transform: translateX(0) rotate(0deg); }
         }
 
         .fire { 
@@ -267,7 +274,7 @@ export default function App() {
 
 const styles = {
   menuScreen: { height: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: '"Cinzel", serif, Arial', color: '#fff' },
-  mainTitle: { color: '#e63946', fontSize: '4.5rem', marginBottom: '30px', textShadow: '4px 4px #000' },
+  mainTitle: { color: '#e63946', fontSize: '4.5rem', marginBottom: '30px', textShadow: '4px 4px #000', textAlign: 'center' },
   loginBox: { background: 'rgba(20, 20, 20, 0.9)', padding: '40px', borderRadius: '20px', border: '2px solid #444', textAlign: 'center', boxShadow: '0 0 30px rgba(255,0,0,0.2)' },
   inputMenu: { padding: '15px', width: '280px', marginBottom: '20px', borderRadius: '8px', border: '1px solid #666', fontSize: '1.1rem', background: '#000', color: '#fff' },
   buttonStart: { width: '100%', padding: '18px', background: '#b22222', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.4rem', borderRadius: '8px', transition: '0.3s' },
@@ -285,7 +292,7 @@ const styles = {
   timerNumber: { fontSize: '6.5rem', color: '#ffcc00', fontWeight: 'bold', lineHeight: '1', textShadow: '0 0 25px rgba(255,204,0,0.6)' },
   battlefield: { height: '420px', position: 'relative', zIndex: 2 },
   tower: { position: 'absolute', left: '10px', bottom: '0px', height: '320px', filter: 'drop-shadow(5px 5px 15px #000)' },
-  hero: { position: 'absolute', left: '230px', bottom: '20px', height: '200px', zIndex: 3, filter: 'drop-shadow(2px 2px 10px #000)' },
+  hero: { position: 'absolute', left: '230px', bottom: '20px', height: '200px', zIndex: 3, filter: 'drop-shadow(2px 2px 10px #000)', transition: 'transform 0.1s' },
   dragon: { position: 'absolute', right: '40px', bottom: '40px', height: '280px', zIndex: 3 },
   questionCard: { position: 'relative', zIndex: 5, textAlign: 'center', padding: '25px', background: 'rgba(5,5,5,0.92)', borderTop: '4px solid #b22222', width: '100%', height: '220px' },
   inputGame: { fontSize: '3rem', width: '200px', textAlign: 'center', background: '#000', color: '#ffcc00', border: '2px solid #b22222', borderRadius: '12px', outline: 'none', boxShadow: 'inset 0 0 10px rgba(255,0,0,0.2)' }
