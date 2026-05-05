@@ -29,24 +29,24 @@ export default function App() {
   const [dados, setDados] = useState(() => gerarPergunta(1));
   const [resposta, setResposta] = useState("");
   
-  // Estados de Animação
   const [shake, setShake] = useState(false);
   const [fogoAtivo, setFogoAtivo] = useState(false);
   const [dragaoAtacando, setDragaoAtacando] = useState(false);
-  const [heroiAtacando, setHeroiAtacando] = useState(false); // NOVO: Estado de ataque do herói
+  const [heroiAtacando, setHeroiAtacando] = useState(false);
   
   const [ranking, setRanking] = useState(() => JSON.parse(localStorage.getItem("math_ranks") || "[]"));
 
-  // Referências de Áudio
+  // Áudios Atualizados
   const somDragao = useRef(new Audio("https://www.soundjay.com/creatures/sounds/dragon-roar-1.mp3"));
   const somTick = useRef(new Audio("https://www.soundjay.com/buttons/sounds/button-50.mp3"));
-  const somAtaqueHeroi = useRef(new Audio("https://www.soundjay.com/mechanical/sounds/sword-clash-1.mp3")); // NOVO: Som de espada
-  const musicaGuerra = useRef(new Audio("https://www.soundjay.com/free-music/sounds/action-rock-1.mp3"));
+  const somAtaqueHeroi = useRef(new Audio("https://www.soundjay.com/mechanical/sounds/sword-clash-1.mp3"));
+  // NOVA MÚSICA CHIPTUNE 8-BIT
+  const musicaGuerra = useRef(new Audio("https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3"));
 
   const handleStart = () => {
     const m = musicaGuerra.current;
     m.loop = true;
-    m.volume = 0.3;
+    m.volume = 0.2;
     m.play().then(() => setJogoIniciado(true)).catch(() => setJogoIniciado(true));
   };
 
@@ -64,7 +64,6 @@ export default function App() {
     const acertou = !porTempo && parseInt(resposta) === dados.resposta;
 
     if (acertou) {
-      // ANIMAÇÃO DE ATAQUE DO HERÓI
       setHeroiAtacando(true);
       somAtaqueHeroi.current.currentTime = 0;
       somAtaqueHeroi.current.play().catch(() => {});
@@ -189,12 +188,11 @@ export default function App() {
         <div style={styles.battlefield}>
           <img src={IMG_TORRE} style={styles.tower} alt="Torre" />
           
-          {/* HERÓI COM ANIMAÇÃO DE ATAQUE */}
           <img 
             src={IMG_HEROI} 
             style={{
                 ...styles.hero,
-                animation: heroiAtacando ? "ataqueHeroi 0.5s ease-out" : "none"
+                animation: heroiAtacando ? "ataqueHeroi 0.5s ease-out" : "flutuarHeroi 4s infinite ease-in-out"
             }} 
             alt="Heroi" 
           />
@@ -237,17 +235,22 @@ export default function App() {
           50% { transform: translateY(-25px); }
         }
 
+        /* ANIMAÇÃO DE ESPERA DO HERÓI */
+        @keyframes flutuarHeroi {
+          0%, 100% { transform: translateY(0px) scaleX(-1); }
+          50% { transform: translateY(-15px) scaleX(-1); }
+        }
+
         @keyframes investida {
           0% { transform: translateX(0) scale(1); }
           50% { transform: translateX(-250px) scale(1.3); filter: brightness(1.8) drop-shadow(0 0 15px red); }
           100% { transform: translateX(0) scale(1); }
         }
 
-        /* NOVA ANIMAÇÃO: ATAQUE DO HERÓI */
         @keyframes ataqueHeroi {
-          0% { transform: translateX(0) rotate(0deg); }
-          50% { transform: translateX(300px) rotate(15deg) scale(1.2); filter: brightness(1.5); }
-          100% { transform: translateX(0) rotate(0deg); }
+          0% { transform: translateX(0) rotate(0deg) scaleX(-1); }
+          50% { transform: translateX(400px) rotate(20deg) scale(1.4) scaleX(-1); filter: brightness(2); }
+          100% { transform: translateX(0) rotate(0deg) scaleX(-1); }
         }
 
         .fire { 
@@ -292,7 +295,7 @@ const styles = {
   timerNumber: { fontSize: '6.5rem', color: '#ffcc00', fontWeight: 'bold', lineHeight: '1', textShadow: '0 0 25px rgba(255,204,0,0.6)' },
   battlefield: { height: '420px', position: 'relative', zIndex: 2 },
   tower: { position: 'absolute', left: '10px', bottom: '0px', height: '320px', filter: 'drop-shadow(5px 5px 15px #000)' },
-  hero: { position: 'absolute', left: '230px', bottom: '20px', height: '200px', zIndex: 3, filter: 'drop-shadow(2px 2px 10px #000)', transition: 'transform 0.1s' },
+  hero: { position: 'absolute', left: '180px', bottom: '30px', height: '280px', zIndex: 3, filter: 'drop-shadow(2px 2px 10px #000)', transition: 'transform 0.1s' },
   dragon: { position: 'absolute', right: '40px', bottom: '40px', height: '280px', zIndex: 3 },
   questionCard: { position: 'relative', zIndex: 5, textAlign: 'center', padding: '25px', background: 'rgba(5,5,5,0.92)', borderTop: '4px solid #b22222', width: '100%', height: '220px' },
   inputGame: { fontSize: '3rem', width: '200px', textAlign: 'center', background: '#000', color: '#ffcc00', border: '2px solid #b22222', borderRadius: '12px', outline: 'none', boxShadow: 'inset 0 0 10px rgba(255,0,0,0.2)' }
